@@ -1,30 +1,64 @@
-# Next.js Climate Tool
+# CAAT - Climate Adaptive Architecture Tool
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+A comprehensive tool for climate-adaptive architecture design and analysis.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/danielortiz0220s-projects/v0-next-js-climate-tool)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/WToK1RIWmcv)
+## Project Structure
+
+```
+CAAT-Climate-Adaptive-Architecture-Tool/
+├── config/           # Configuration files
+├── frontend/         # Next.js frontend application
+│   └── src/         # Frontend source code
+├── backend/         # Backend services
+│   └── src/         # Backend source code
+├── data/            # Data storage and resources
+└── README.md        # Project documentation
+```
 
 ## Overview
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+CAAT (Climate Adaptive Architecture Tool) is a comprehensive platform designed to assist architects and designers in creating climate-responsive buildings. The tool provides analysis, recommendations, and visualization capabilities for climate-adaptive architecture.
 
-## Deployment
+## Getting Started
 
-Your project is live at:
+### Prerequisites
 
-**[https://vercel.com/danielortiz0220s-projects/v0-next-js-climate-tool](https://vercel.com/danielortiz0220s-projects/v0-next-js-climate-tool)**
+- Node.js (v18 or higher)
+- pnpm package manager
+- Python 3.8+ (for backend services)
 
-## Build your app
+### Installation
 
-Continue building your app on:
+1. Clone the repository
+2. Install frontend dependencies:
+   ```bash
+   cd frontend
+   pnpm install
+   ```
+3. Install backend dependencies:
+   ```bash
+   cd backend
+   pip install -r requirements.txt
+   ```
 
-**[https://v0.dev/chat/projects/WToK1RIWmcv](https://v0.dev/chat/projects/WToK1RIWmcv)**
+### Development
 
-## How It Works
+1. Start the frontend development server:
+   ```bash
+   cd frontend
+   pnpm dev
+   ```
 
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+2. Start the backend server:
+   ```bash
+   cd backend
+   python src/main.py
+   ```
+
+## Contributing
+
+Please read our contributing guidelines before submitting pull requests.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

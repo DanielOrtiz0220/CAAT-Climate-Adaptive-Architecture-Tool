@@ -397,9 +397,9 @@ export default function ClimateAdaptiveArchitectureTool() {
           </div>
 
           {/* Footer */}
-          <footer className="text-center mt-12 py-6 border-t border-gray-200">
+          {/* <footer className="text-center mt-12 py-6 border-t border-gray-200">
             <p className="text-gray-600">Made with Next.js ⚡</p>
-          </footer>
+          </footer> */}
         </div>
       </div>
     </div>
