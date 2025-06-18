@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/ui.button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/ui.card"
 import { Input } from "@/components/ui/ui.input"
@@ -27,7 +27,7 @@ Folder Structure:
 */
 
 interface FormData {
-  foundationType: "slab" | "elevated slab" | "pier" | "amphibious" | ""
+  foundationType: "SLAB_ON_GRADE" | "ELEVATED_FOUNDATION" | "PIER_AND_BEAM" | "PILE_FOUNDATION" | ""
   siteElevation: number
   baseFloodElevation: number
   roofMaterial: "metal" | "asphalt" | "tile" | ""
@@ -39,16 +39,22 @@ interface FormData {
 }
 
 interface EvaluationResult {
-  score: number
-  performance: Array<{ year: number; resilience: number }>
-  recs: string[]
-  cost: string
+  currentScore: number
+  timeline: Array<{
+    year: number
+    projectedBFE: number
+    score: number
+    recommendations: string[]
+  }>
+  overallRecommendations: string[]
 }
 
 export default function ClimateAdaptiveArchitectureTool() {
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
+  const [loadingStep, setLoadingStep] = useState<string>("")
   const [result, setResult] = useState<EvaluationResult | null>(null)
+  const [backendConnected, setBackendConnected] = useState<boolean | null>(null)
   const [formData, setFormData] = useState<FormData>({
     foundationType: "",
     siteElevation: 0,
@@ -62,6 +68,25 @@ export default function ClimateAdaptiveArchitectureTool() {
   })
 
   const [validationErrors, setValidationErrors] = useState<string[]>([])
+
+  // Check backend connectivity on component mount
+  const checkBackendHealth = async () => {
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"
+      const response = await fetch(`${backendUrl}/api/health`, {
+        method: "GET",
+        signal: AbortSignal.timeout(5000), // 5 second timeout
+      })
+      setBackendConnected(response.ok)
+    } catch (error) {
+      setBackendConnected(false)
+    }
+  }
+
+  // Check backend health on mount
+  useEffect(() => {
+    checkBackendHealth()
+  }, [])
 
   const validateForm = (): boolean => {
     const errors: string[] = []
@@ -102,35 +127,67 @@ export default function ClimateAdaptiveArchitectureTool() {
     }
 
     setIsLoading(true)
+    setLoadingStep("Preparing assessment...")
 
     try {
-      const response = await fetch("/api/evaluate", {
+      // Check backend connectivity first
+      if (backendConnected === false) {
+        throw new Error("Backend server is not available")
+      }
+
+      setLoadingStep("Analyzing building characteristics...")
+
+      // Transform frontend form data to backend API format
+      const backendRequest = {
+        foundationType: formData.foundationType,
+        elevationAboveBFE: Math.max(0, formData.siteElevation - formData.baseFloodElevation),
+        materials: ["MIXED"], // Default for now, can be enhanced later
+        mitigationFeatures: [
+          ...(formData.floodVents ? ["FLOOD_VENTS"] : []),
+          ...(formData.utilitiesProtected ? ["ELEVATED_UTILITIES"] : []),
+        ],
+        utilityProtection: formData.utilitiesProtected,
+        location: {
+          latitude: 29.9511, // New Orleans default coordinates
+          longitude: -90.0715,
+        },
+      }
+
+      setLoadingStep("Calculating resilience scores...")
+
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"
+      const response = await fetch(`${backendUrl}/api/assess`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(backendRequest),
       })
 
       if (!response.ok) {
-        throw new Error("Failed to evaluate architecture")
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || "Failed to evaluate architecture")
       }
+
+      setLoadingStep("Generating AI recommendations...")
 
       const data: EvaluationResult = await response.json()
       setResult(data)
 
       toast({
-        title: "Evaluation Complete",
-        description: `Resilience score: ${data.score}/100`,
+        title: "Assessment Complete! 🎉",
+        description: `Resilience score: ${data.currentScore}/100 with ${data.overallRecommendations.length} AI recommendations`,
       })
     } catch (error) {
+      console.error("Assessment error:", error)
       toast({
-        title: "Evaluation Failed",
-        description: "Unable to evaluate architecture. Please try again.",
+        title: "Assessment Failed",
+        description: error instanceof Error ? error.message : "Unable to connect to backend. Please ensure the backend server is running.",
         variant: "destructive",
       })
     } finally {
       setIsLoading(false)
+      setLoadingStep("")
     }
   }
 
@@ -145,11 +202,30 @@ export default function ClimateAdaptiveArchitectureTool() {
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-2 mb-4">
+            <div className="flex items-center justify-center gap-3 mb-4">
               <Home className="h-8 w-8 text-blue-600" />
               <h1 className="text-4xl font-bold text-gray-900">Climate-Adaptive Architecture Tool</h1>
+              <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-1 rounded-full text-sm font-medium">
+                AI-Powered
+              </div>
             </div>
-            <p className="text-lg text-gray-600">Evaluate your building's resilience to climate change and flooding</p>
+            <p className="text-lg text-gray-600 mb-2">
+              Advanced climate resilience assessment with AI-enhanced recommendations
+            </p>
+            <div className="flex items-center justify-center gap-6 text-sm text-gray-500">
+              <span className="flex items-center gap-1">
+                <TrendingUp className="h-4 w-4" />
+                Timeline Projections
+              </span>
+              <span className="flex items-center gap-1">
+                <AlertTriangle className="h-4 w-4" />
+                Risk Analysis
+              </span>
+              <span className="flex items-center gap-1">
+                <Home className="h-4 w-4" />
+                Smart Recommendations
+              </span>
+            </div>
           </div>
 
           <div className="grid lg:grid-cols-2 gap-8">
@@ -172,10 +248,10 @@ export default function ClimateAdaptiveArchitectureTool() {
                         <SelectValue placeholder="Select foundation type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="slab">Slab</SelectItem>
-                        <SelectItem value="elevated slab">Elevated Slab</SelectItem>
-                        <SelectItem value="pier">Pier</SelectItem>
-                        <SelectItem value="amphibious">Amphibious</SelectItem>
+                        <SelectItem value="SLAB_ON_GRADE">Slab on Grade</SelectItem>
+                        <SelectItem value="ELEVATED_FOUNDATION">Elevated Foundation</SelectItem>
+                        <SelectItem value="PIER_AND_BEAM">Pier and Beam</SelectItem>
+                        <SelectItem value="PILE_FOUNDATION">Pile Foundation</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -295,16 +371,43 @@ export default function ClimateAdaptiveArchitectureTool() {
                     </div>
                   )}
 
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button type="submit" className="w-full" disabled={isLoading || backendConnected === false}>
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Evaluating...
+                        {loadingStep || "Processing..."}
+                      </>
+                    ) : backendConnected === false ? (
+                      <>
+                        <AlertTriangle className="mr-2 h-4 w-4" />
+                        Backend Unavailable
                       </>
                     ) : (
-                      "Evaluate Architecture"
+                      "🚀 Analyze with AI"
                     )}
                   </Button>
+
+                  {/* Backend Status Indicator */}
+                  {backendConnected !== null && (
+                    <div className="flex items-center justify-center gap-2 mt-3 text-sm">
+                      <div className={`w-2 h-2 rounded-full ${
+                        backendConnected ? 'bg-green-500' : 'bg-red-500'
+                      }`}></div>
+                      <span className={backendConnected ? 'text-green-700' : 'text-red-700'}>
+                        {backendConnected ? 'AI Backend Connected' : 'AI Backend Disconnected'}
+                      </span>
+                      {!backendConnected && (
+                        <Button
+                          variant="link"
+                          size="sm"
+                          onClick={checkBackendHealth}
+                          className="p-0 h-auto text-blue-600"
+                        >
+                          Retry
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </form>
               </CardContent>
             </Card>
@@ -313,24 +416,35 @@ export default function ClimateAdaptiveArchitectureTool() {
             {result && (
               <div className="space-y-6">
                 {/* Resilience Score */}
-                <Card>
+                <Card className="border-l-4 border-l-blue-500">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5" />
-                      Resilience Score
+                      <TrendingUp className="h-5 w-5 text-blue-600" />
+                      AI-Calculated Resilience Score
                     </CardTitle>
+                    <CardDescription>
+                      Comprehensive assessment using advanced climate modeling
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="text-center">
-                      <div className="text-6xl font-bold text-blue-600 mb-2">{result.score}</div>
-                      <div className="text-lg text-gray-600">out of 100</div>
-                      <div className="mt-4">
-                        <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div className="text-6xl font-bold text-blue-600 mb-2">{result.currentScore}</div>
+                      <div className="text-lg text-gray-600 mb-4">out of 100</div>
+                      <div className="mb-4">
+                        <div className="w-full bg-gray-200 rounded-full h-4">
                           <div
-                            className="bg-blue-600 h-3 rounded-full transition-all duration-500"
-                            style={{ width: `${result.score}%` }}
+                            className={`h-4 rounded-full transition-all duration-1000 ${
+                              result.currentScore >= 80 ? 'bg-green-500' :
+                              result.currentScore >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                            }`}
+                            style={{ width: `${result.currentScore}%` }}
                           ></div>
                         </div>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {result.currentScore >= 80 ? '🟢 Excellent resilience' :
+                         result.currentScore >= 60 ? '🟡 Good resilience, improvements recommended' :
+                         '🔴 Critical improvements needed'}
                       </div>
                     </div>
                   </CardContent>
@@ -339,23 +453,37 @@ export default function ClimateAdaptiveArchitectureTool() {
                 {/* Performance Chart */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Performance Over Time</CardTitle>
-                    <CardDescription>Projected resilience performance</CardDescription>
+                    <CardTitle>Performance Timeline</CardTitle>
+                    <CardDescription>Projected resilience scores with climate change impacts</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="h-64">
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={result.performance}>
+                        <LineChart data={result.timeline}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="year" />
                           <YAxis />
-                          <Tooltip />
+                          <Tooltip
+                            formatter={(value, name) => [
+                              name === 'score' ? `${value} points` : `${value} ft`,
+                              name === 'score' ? 'Resilience Score' : 'Projected BFE'
+                            ]}
+                          />
                           <Line
                             type="monotone"
-                            dataKey="resilience"
+                            dataKey="score"
                             stroke="#2563eb"
                             strokeWidth={2}
                             dot={{ fill: "#2563eb" }}
+                            name="score"
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="projectedBFE"
+                            stroke="#dc2626"
+                            strokeWidth={2}
+                            dot={{ fill: "#dc2626" }}
+                            name="projectedBFE"
                           />
                         </LineChart>
                       </ResponsiveContainer>
@@ -366,29 +494,50 @@ export default function ClimateAdaptiveArchitectureTool() {
                 {/* Recommendations */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Recommendations</CardTitle>
-                    <CardDescription>Suggested improvements for better resilience</CardDescription>
+                    <CardTitle>AI-Enhanced Recommendations</CardTitle>
+                    <CardDescription>Intelligent suggestions for improving climate resilience</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <ul className="space-y-2">
-                      {result.recs.map((rec, index) => (
-                        <li key={index} className="flex items-start gap-2">
+                    <ul className="space-y-3">
+                      {result.overallRecommendations.map((rec, index) => (
+                        <li key={index} className="flex items-start gap-3">
                           <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
-                          <span className="text-gray-700">{rec}</span>
+                          <span className="text-gray-700 leading-relaxed">{rec}</span>
                         </li>
                       ))}
                     </ul>
                   </CardContent>
                 </Card>
 
-                {/* Cost-Benefit Analysis */}
+                {/* Timeline Insights */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Cost-Benefit Analysis</CardTitle>
+                    <CardTitle>Timeline Insights</CardTitle>
+                    <CardDescription>Year-by-year projections and recommendations</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="prose prose-sm max-w-none">
-                      <p className="text-gray-700 leading-relaxed">{result.cost}</p>
+                    <div className="space-y-4">
+                      {result.timeline.slice(0, 3).map((timepoint, index) => (
+                        <div key={index} className="border-l-4 border-blue-200 pl-4">
+                          <div className="flex justify-between items-center mb-2">
+                            <h4 className="font-semibold text-gray-900">{timepoint.year}</h4>
+                            <span className="text-sm text-gray-600">Score: {timepoint.score}/100</span>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-2">
+                            Projected BFE: {timepoint.projectedBFE.toFixed(1)} ft
+                          </p>
+                          {timepoint.recommendations.length > 0 && (
+                            <ul className="text-sm text-gray-700 space-y-1">
+                              {timepoint.recommendations.slice(0, 2).map((rec, recIndex) => (
+                                <li key={recIndex} className="flex items-start gap-2">
+                                  <span className="text-blue-600">•</span>
+                                  <span>{rec}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>

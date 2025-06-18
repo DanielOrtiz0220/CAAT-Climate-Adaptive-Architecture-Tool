@@ -4,12 +4,12 @@ dotenv.config();
 
 export const config = {
   // Server Configuration
-  port: process.env.PORT || 3000,
+  port: process.env.PORT || 8000,
   
   // OpenAI Configuration
   openai: {
     apiKey: process.env.OPENAI_API_KEY,
-    model: 'gpt-4-turbo-preview',
+    model: 'chatgpt-4o-latest',
   },
 
   // Scoring Weights
