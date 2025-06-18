@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/ui.checkbox"
 import { Textarea } from "@/components/ui/ui.textarea"
 import { Alert, AlertDescription } from "@/components/ui/ui.alert"
 import { useToast } from "@/hooks/hooks.use-toast"
+import { checkBackendHealth, fetchWithFallback } from "@/lib/lib.api"
 import { Loader2, AlertTriangle, Home, TrendingUp } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 
@@ -57,6 +58,8 @@ export default function ClimateAdaptiveArchitectureTool() {
   const [loadingStep, setLoadingStep] = useState<string>("")
   const [result, setResult] = useState<EvaluationResult | null>(null)
   const [backendConnected, setBackendConnected] = useState<boolean | null>(null)
+  const [usingFallback, setUsingFallback] = useState<boolean>(false)
+  const [currentBackendUrl, setCurrentBackendUrl] = useState<string>('')
   const [formData, setFormData] = useState<FormData>({
     foundationType: "",
     siteElevation: "0",
@@ -73,22 +76,22 @@ export default function ClimateAdaptiveArchitectureTool() {
   const [validationErrors, setValidationErrors] = useState<string[]>([])
 
   // Check backend connectivity on component mount
-  const checkBackendHealth = async () => {
+  const checkBackendHealthStatus = async () => {
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"
-      const response = await fetch(`${backendUrl}/api/health`, {
-        method: "GET",
-        signal: AbortSignal.timeout(5000), // 5 second timeout
-      })
-      setBackendConnected(response.ok)
+      const healthResult = await checkBackendHealth()
+      setBackendConnected(healthResult.connected)
+      setUsingFallback(healthResult.usingFallback)
+      setCurrentBackendUrl(healthResult.url)
     } catch (error) {
       setBackendConnected(false)
+      setUsingFallback(false)
+      setCurrentBackendUrl('')
     }
   }
 
   // Check backend health on mount
   useEffect(() => {
-    checkBackendHealth()
+    checkBackendHealthStatus()
   }, [])
 
   const validateForm = (): boolean => {
@@ -181,8 +184,7 @@ export default function ClimateAdaptiveArchitectureTool() {
 
       setLoadingStep("Calculating resilience scores...")
 
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"
-      const response = await fetch(`${backendUrl}/api/assess`, {
+      const response = await fetchWithFallback("/api/assess", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -452,22 +454,37 @@ export default function ClimateAdaptiveArchitectureTool() {
 
                   {/* Backend Status Indicator */}
                   {backendConnected !== null && (
-                    <div className="flex items-center justify-center gap-2 mt-3 text-sm">
-                      <div className={`w-2 h-2 rounded-full ${
-                        backendConnected ? 'bg-green-500' : 'bg-red-500'
-                      }`}></div>
-                      <span className={backendConnected ? 'text-green-700' : 'text-red-700'}>
-                        {backendConnected ? 'AI Backend Connected' : 'AI Backend Disconnected'}
-                      </span>
-                      {!backendConnected && (
-                        <Button
-                          variant="link"
-                          size="sm"
-                          onClick={checkBackendHealth}
-                          className="p-0 h-auto text-blue-600"
-                        >
-                          Retry
-                        </Button>
+                    <div className="flex flex-col items-center justify-center gap-1 mt-3 text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${
+                          backendConnected ? 'bg-green-500' : 'bg-red-500'
+                        }`}></div>
+                        <span className={backendConnected ? 'text-green-700' : 'text-red-700'}>
+                          {backendConnected ? 'AI Backend Connected' : 'AI Backend Disconnected'}
+                        </span>
+                        {!backendConnected && (
+                          <Button
+                            variant="link"
+                            size="sm"
+                            onClick={checkBackendHealthStatus}
+                            className="p-0 h-auto text-blue-600"
+                          >
+                            Retry
+                          </Button>
+                        )}
+                      </div>
+                      {backendConnected && currentBackendUrl && (
+                        <div className="text-xs text-gray-500">
+                          {usingFallback ? (
+                            <span className="text-yellow-600">
+                              ⚠️ Using fallback: localhost
+                            </span>
+                          ) : (
+                            <span className="text-green-600">
+                              ✅ Using production: Railway
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
