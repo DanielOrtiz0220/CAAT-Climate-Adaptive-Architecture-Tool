@@ -3,7 +3,7 @@
  */
 
 const PRODUCTION_URL = 'https://caat-climate-adaptive-architecture-tool-production.up.railway.app'
-const LOCALHOST_URL = 'http://localhost:8000'
+const LOCALHOST_URL = 'http://localhost:8080'
 
 /**
  * Get the backend URL with production as primary and localhost as fallback
