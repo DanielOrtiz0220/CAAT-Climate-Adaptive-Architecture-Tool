@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/ui.input"
 import { Label } from "@/components/ui/ui.label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/ui.select"
 import { Checkbox } from "@/components/ui/ui.checkbox"
+import { Textarea } from "@/components/ui/ui.textarea"
 import { Alert, AlertDescription } from "@/components/ui/ui.alert"
 import { useToast } from "@/hooks/hooks.use-toast"
 import { Loader2, AlertTriangle, Home, TrendingUp } from "lucide-react"
@@ -28,14 +29,15 @@ Folder Structure:
 
 interface FormData {
   foundationType: "SLAB_ON_GRADE" | "ELEVATED_FOUNDATION" | "PIER_AND_BEAM" | "PILE_FOUNDATION" | ""
-  siteElevation: number
-  baseFloodElevation: number
+  siteElevation: string
+  baseFloodElevation: string
   roofMaterial: "metal" | "asphalt" | "tile" | ""
   floodVents: boolean
   breakawayWalls: boolean
   utilitiesProtected: boolean
   floodZone: "A" | "AE" | "V" | "X" | ""
-  yearBuilt: number
+  yearBuilt: string
+  designDescription: string
 }
 
 interface EvaluationResult {
@@ -57,14 +59,15 @@ export default function ClimateAdaptiveArchitectureTool() {
   const [backendConnected, setBackendConnected] = useState<boolean | null>(null)
   const [formData, setFormData] = useState<FormData>({
     foundationType: "",
-    siteElevation: 0,
-    baseFloodElevation: 0,
+    siteElevation: "0",
+    baseFloodElevation: "0",
     roofMaterial: "",
     floodVents: false,
     breakawayWalls: false,
     utilitiesProtected: false,
     floodZone: "",
-    yearBuilt: new Date().getFullYear(),
+    yearBuilt: new Date().getFullYear().toString(),
+    designDescription: "",
   })
 
   const [validationErrors, setValidationErrors] = useState<string[]>([])
@@ -91,15 +94,18 @@ export default function ClimateAdaptiveArchitectureTool() {
   const validateForm = (): boolean => {
     const errors: string[] = []
 
-    if (formData.siteElevation < 0) {
+    const siteElevationNum = Number.parseFloat(formData.siteElevation) || 0
+    const baseFloodElevationNum = Number.parseFloat(formData.baseFloodElevation) || 0
+
+    if (siteElevationNum < 0) {
       errors.push("Site elevation must be 0 or greater")
     }
 
-    if (formData.baseFloodElevation < 0) {
+    if (baseFloodElevationNum < 0) {
       errors.push("Base flood elevation must be 0 or greater")
     }
 
-    if (formData.siteElevation < formData.baseFloodElevation) {
+    if (siteElevationNum < baseFloodElevationNum) {
       errors.push("Warning: Site elevation is below Base Flood Elevation - high flood risk!")
     }
 
@@ -113,6 +119,10 @@ export default function ClimateAdaptiveArchitectureTool() {
 
     if (!formData.floodZone) {
       errors.push("Flood zone is required")
+    }
+
+    if (formData.designDescription.length > 1000) {
+      errors.push("Design description must be 1000 characters or less")
     }
 
     setValidationErrors(errors)
@@ -138,9 +148,12 @@ export default function ClimateAdaptiveArchitectureTool() {
       setLoadingStep("Analyzing building characteristics...")
 
       // Transform frontend form data to backend API format
+      const siteElevationNum = Number.parseFloat(formData.siteElevation) || 0
+      const baseFloodElevationNum = Number.parseFloat(formData.baseFloodElevation) || 0
+      
       const backendRequest = {
         foundationType: formData.foundationType,
-        elevationAboveBFE: Math.max(0, formData.siteElevation - formData.baseFloodElevation),
+        elevationAboveBFE: Math.max(0, siteElevationNum - baseFloodElevationNum),
         materials: ["MIXED"], // Default for now, can be enhanced later
         mitigationFeatures: [
           ...(formData.floodVents ? ["FLOOD_VENTS"] : []),
@@ -151,6 +164,7 @@ export default function ClimateAdaptiveArchitectureTool() {
           latitude: 29.9511, // New Orleans default coordinates
           longitude: -90.0715,
         },
+        designDescription: formData.designDescription,
       }
 
       setLoadingStep("Calculating resilience scores...")
@@ -264,7 +278,7 @@ export default function ClimateAdaptiveArchitectureTool() {
                         id="siteElevation"
                         type="number"
                         value={formData.siteElevation}
-                        onChange={(e) => updateFormData("siteElevation", Number.parseFloat(e.target.value) || 0)}
+                        onChange={(e) => updateFormData("siteElevation", e.target.value)}
                         min="0"
                         step="0.1"
                       />
@@ -275,7 +289,7 @@ export default function ClimateAdaptiveArchitectureTool() {
                         id="bfe"
                         type="number"
                         value={formData.baseFloodElevation}
-                        onChange={(e) => updateFormData("baseFloodElevation", Number.parseFloat(e.target.value) || 0)}
+                        onChange={(e) => updateFormData("baseFloodElevation", e.target.value)}
                         min="0"
                         step="0.1"
                       />
@@ -350,12 +364,36 @@ export default function ClimateAdaptiveArchitectureTool() {
                         id="yearBuilt"
                         type="number"
                         value={formData.yearBuilt}
-                        onChange={(e) =>
-                          updateFormData("yearBuilt", Number.parseInt(e.target.value) || new Date().getFullYear())
-                        }
+                        onChange={(e) => updateFormData("yearBuilt", e.target.value)}
                         min="1800"
                         max={new Date().getFullYear()}
                       />
+                    </div>
+                  </div>
+
+                  {/* Design Description */}
+                  <div className="space-y-2">
+                    <Label htmlFor="designDescription">Design Description (Optional)</Label>
+                    <div className="space-y-1">
+                      <Textarea
+                        id="designDescription"
+                        value={formData.designDescription}
+                        onChange={(e) => updateFormData("designDescription", e.target.value)}
+                        placeholder="Describe your architectural design, materials, special features, or any specific climate considerations..."
+                        className="min-h-[100px] resize-vertical"
+                        maxLength={1000}
+                      />
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-500">
+                          Help the AI provide more targeted recommendations
+                        </span>
+                        <span className={`${
+                          formData.designDescription.length > 900 ? 'text-red-600' :
+                          formData.designDescription.length > 800 ? 'text-yellow-600' : 'text-gray-500'
+                        }`}>
+                          {formData.designDescription.length}/1000
+                        </span>
+                      </div>
                     </div>
                   </div>
 

@@ -65,6 +65,9 @@ export class AIService {
       - Materials: ${request.materials.join(', ')}
       - Mitigation Features: ${request.mitigationFeatures.join(', ')}
       - Utility Protection: ${request.utilityProtection ? 'Yes' : 'No'}
+      ${request.designDescription ? `
+      Design Description & Goals:
+      ${request.designDescription}` : ''}
 
       Current Recommendations:
       ${baseRecommendations.map(rec => `- ${rec}`).join('\n')}
@@ -82,6 +85,7 @@ export class AIService {
       3. Cost-effective solutions
       4. Local building codes and regulations
       5. Climate change projections
+      ${request.designDescription ? '6. The user\'s design goals and requirements described above' : ''}
 
       Format each recommendation as a separate line, starting with a bullet point.
     `;

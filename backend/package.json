@@ -2,9 +2,9 @@
   "name": "caat-backend",
   "version": "1.0.0",
   "description": "Climate-Adaptive Architecture Tool Backend",
-  "main": "dist/app.js",
+  "main": "dist/src/app.js",
   "scripts": {
-    "start": "node dist/app.js",
+    "start": "node dist/src/app.js",
     "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
     "build": "tsc",
     "test": "jest"

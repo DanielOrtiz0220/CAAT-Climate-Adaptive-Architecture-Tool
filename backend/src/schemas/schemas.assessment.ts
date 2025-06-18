@@ -37,6 +37,7 @@ export const AssessmentRequestSchema = z.object({
     latitude: z.number(),
     longitude: z.number(),
   }),
+  designDescription: z.string().optional(),
 });
 
 // Assessment Response Schema
