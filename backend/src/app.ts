@@ -22,7 +22,8 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 });
 
 // Start server
-app.listen(config.port, () => {
-  console.log(`Server running on port ${config.port}`);
-  console.log(`Health check available at http://localhost:${config.port}/api/health`);
-}); 
+const port = Number(config.port);
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Server running on port ${port}`);
+  console.log(`Health check available at http://localhost:${port}/api/health`);
+});
