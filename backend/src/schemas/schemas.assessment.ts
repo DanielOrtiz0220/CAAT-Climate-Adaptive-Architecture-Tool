@@ -17,6 +17,13 @@ export const MaterialType = z.enum([
   'MIXED',
 ]);
 
+// Roof Material Types (separate from structural materials)
+export const RoofMaterialType = z.enum([
+  'METAL',
+  'ASPHALT_SHINGLE',
+  'TILE',
+]);
+
 // Mitigation Features
 export const MitigationFeature = z.enum([
   'FLOOD_VENTS',
@@ -30,7 +37,9 @@ export const MitigationFeature = z.enum([
 export const AssessmentRequestSchema = z.object({
   foundationType: FoundationType,
   elevationAboveBFE: z.number().min(0),
+  currentBFE: z.number().min(0), // User's site Base Flood Elevation in feet
   materials: z.array(MaterialType),
+  roofMaterial: RoofMaterialType,
   mitigationFeatures: z.array(MitigationFeature),
   utilityProtection: z.boolean(),
   location: z.object({
@@ -55,6 +64,7 @@ export const AssessmentResponseSchema = z.object({
 // TypeScript Types
 export type FoundationType = z.infer<typeof FoundationType>;
 export type MaterialType = z.infer<typeof MaterialType>;
+export type RoofMaterialType = z.infer<typeof RoofMaterialType>;
 export type MitigationFeature = z.infer<typeof MitigationFeature>;
 export type AssessmentRequest = z.infer<typeof AssessmentRequestSchema>;
 export type AssessmentResponse = z.infer<typeof AssessmentResponseSchema>;

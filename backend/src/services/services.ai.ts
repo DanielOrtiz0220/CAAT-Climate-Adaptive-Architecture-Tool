@@ -23,7 +23,7 @@ export class AIService {
         messages: [
           {
             role: 'system',
-            content: 'You are an expert in flood-resilient architecture and climate adaptation. Provide specific, actionable recommendations for improving building resilience.'
+            content: 'You are an expert in flood-resilient architecture, climate adaptation, and roofing materials. Provide specific, actionable recommendations for improving building resilience, including roof material considerations for wind resistance, durability, and climate performance.'
           },
           {
             role: 'user',
@@ -31,7 +31,7 @@ export class AIService {
           }
         ],
         temperature: 0.7,
-        max_tokens: 500,
+        max_tokens: 250,
       });
 
       const response = completion.choices[0]?.message?.content;
@@ -62,7 +62,8 @@ export class AIService {
       Building Assessment Details:
       - Foundation Type: ${request.foundationType}
       - Elevation Above BFE: ${request.elevationAboveBFE} feet
-      - Materials: ${request.materials.join(', ')}
+      - Structural Materials: ${request.materials.join(', ')}
+      - Roof Material: ${request.roofMaterial} (${this.getRoofMaterialDescription(request.roofMaterial)})
       - Mitigation Features: ${request.mitigationFeatures.join(', ')}
       - Utility Protection: ${request.utilityProtection ? 'Yes' : 'No'}
       ${request.designDescription ? `
@@ -85,9 +86,22 @@ export class AIService {
       3. Cost-effective solutions
       4. Local building codes and regulations
       5. Climate change projections
-      ${request.designDescription ? '6. The user\'s design goals and requirements described above' : ''}
+      6. Roof material performance in extreme weather conditions
+      ${request.designDescription ? '7. The user\'s design goals and requirements described above' : ''}
 
       Format each recommendation as a separate line, starting with a bullet point.
     `;
+  }
+
+  /**
+   * Get descriptive information about roof material properties
+   */
+  private static getRoofMaterialDescription(roofMaterial: string): string {
+    const descriptions = {
+      'METAL': 'Superior wind resistance up to 140+ mph, excellent heat reflection, 40-70 year lifespan',
+      'ASPHALT_SHINGLE': 'Standard residential material, vulnerable to wind uplift and hail, 15-30 year lifespan',
+      'TILE': 'Excellent hurricane resistance, coastal durability, superior fire resistance'
+    };
+    return descriptions[roofMaterial as keyof typeof descriptions] || 'Unknown material properties';
   }
 }

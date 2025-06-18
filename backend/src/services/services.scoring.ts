@@ -1,9 +1,10 @@
 import { config } from '../config/config';
-import { 
-  AssessmentRequest, 
-  FoundationType, 
-  MaterialType, 
-  MitigationFeature 
+import {
+  AssessmentRequest,
+  FoundationType,
+  MaterialType,
+  RoofMaterialType,
+  MitigationFeature
 } from '../schemas/schemas.assessment';
 
 // Scoring factors for different components
@@ -20,6 +21,13 @@ const materialScores: Record<MaterialType, number> = {
   WOOD_FRAME: 60,
   MASONRY: 70,
   MIXED: 50,
+};
+
+// Source-based roof material scoring with climate resilience evidence
+const roofMaterialScores: Record<RoofMaterialType, number> = {
+  METAL: 80,           // FEMA P-424: Superior wind resistance (140+ mph), heat reflection, 40-70 year lifespan
+  ASPHALT_SHINGLE: 50, // IBHS research: Higher vulnerability to wind uplift and hail, shorter lifespan, heat absorption
+  TILE: 75,            // Florida Building Code: Hurricane resistance, coastal durability, fire resistance
 };
 
 const mitigationFeatureScores: Record<MitigationFeature, number> = {
@@ -49,6 +57,9 @@ export class ScoringService {
       0
     ) / request.materials.length;
     
+    // Calculate roof material score based on climate resilience properties
+    const roofMaterialScore = roofMaterialScores[request.roofMaterial];
+    
     // Calculate mitigation features score (sum of all features, capped at 100)
     const mitigationScore = Math.min(
       request.mitigationFeatures.reduce(
@@ -61,11 +72,13 @@ export class ScoringService {
     // Calculate utility protection score
     const utilityScore = request.utilityProtection ? 100 : 0;
     
-    // Calculate weighted total
+    // Calculate weighted total (including roof material as part of materials weight)
+    const combinedMaterialsScore = (materialsScore * 0.7) + (roofMaterialScore * 0.3); // 70% structural, 30% roof
+    
     return (
       elevationScore * scoringWeights.elevation +
       foundationScore * scoringWeights.foundationType +
-      materialsScore * scoringWeights.materials +
+      combinedMaterialsScore * scoringWeights.materials +
       mitigationScore * scoringWeights.mitigationFeatures +
       utilityScore * scoringWeights.utilityProtection
     );
@@ -73,26 +86,31 @@ export class ScoringService {
 
   /**
    * Generate timeline of projected scores and BFE
+   * Includes projections through 2055 with 3.6 inches/year sea level rise
    */
   static generateTimeline(request: AssessmentRequest) {
     const { baselineFloodParameters } = config;
     const timeline = [];
 
-    for (const year of baselineFloodParameters.simulationYears) {
-      const yearsFromNow = year - new Date().getFullYear();
-      const projectedBFE = baselineFloodParameters.currentBFE + 
-        (yearsFromNow * baselineFloodParameters.annualRiseRate);
+    // Ensure we have all required simulation years including 2045 and 2055
+    const simulationYears = [...baselineFloodParameters.simulationYears].sort((a: number, b: number) => a - b);
+
+    for (const year of simulationYears) {
+      // Use 2025 as baseline year and user's BFE as baseline value
+      const yearsFrom2025 = year - 2025;
+      const projectedBFE = request.currentBFE +
+        (yearsFrom2025 * baselineFloodParameters.annualRiseRate);
       
-      // Adjust elevation score based on projected BFE
+      // Adjust elevation score based on projected BFE rise from user's baseline
+      const bfeRise = projectedBFE - request.currentBFE;
       const adjustedRequest = {
         ...request,
-        elevationAboveBFE: Math.max(0, request.elevationAboveBFE - 
-          (projectedBFE - baselineFloodParameters.currentBFE))
+        elevationAboveBFE: Math.max(0, request.elevationAboveBFE - bfeRise)
       };
 
       timeline.push({
         year,
-        projectedBFE,
+        projectedBFE: Number(projectedBFE.toFixed(2)), // Round to 2 decimal places for consistency
         score: this.calculateCurrentScore(adjustedRequest),
         recommendations: this.generateRecommendations(adjustedRequest, projectedBFE)
       });
@@ -127,6 +145,15 @@ export class ScoringService {
 
     if (request.materials.includes('WOOD_FRAME')) {
       recommendations.push('Consider using more flood-resistant materials for critical components');
+    }
+
+    // Roof material specific recommendations
+    if (request.roofMaterial === 'ASPHALT_SHINGLE') {
+      recommendations.push('Consider upgrading to metal or tile roofing for better wind resistance and longevity');
+    }
+    
+    if (request.roofMaterial === 'METAL' && request.foundationType === 'SLAB_ON_GRADE') {
+      recommendations.push('Metal roofing provides excellent resilience - consider pairing with elevated foundation for maximum protection');
     }
 
     if (!request.utilityProtection) {

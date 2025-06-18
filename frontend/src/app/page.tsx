@@ -151,10 +151,19 @@ export default function ClimateAdaptiveArchitectureTool() {
       const siteElevationNum = Number.parseFloat(formData.siteElevation) || 0
       const baseFloodElevationNum = Number.parseFloat(formData.baseFloodElevation) || 0
       
+      // Map frontend roof material values to backend enum values
+      const roofMaterialMapping = {
+        'metal': 'METAL' as const,
+        'asphalt': 'ASPHALT_SHINGLE' as const,
+        'tile': 'TILE' as const,
+      };
+      
       const backendRequest = {
         foundationType: formData.foundationType,
         elevationAboveBFE: Math.max(0, siteElevationNum - baseFloodElevationNum),
+        currentBFE: baseFloodElevationNum, // Add missing currentBFE field
         materials: ["MIXED"], // Default for now, can be enhanced later
+        roofMaterial: roofMaterialMapping[formData.roofMaterial as keyof typeof roofMaterialMapping],
         mitigationFeatures: [
           ...(formData.floodVents ? ["FLOOD_VENTS"] : []),
           ...(formData.utilitiesProtected ? ["ELEVATED_UTILITIES"] : []),
@@ -166,6 +175,9 @@ export default function ClimateAdaptiveArchitectureTool() {
         },
         designDescription: formData.designDescription,
       }
+
+      // Debug logging to confirm request structure
+      console.log('Backend request payload:', backendRequest)
 
       setLoadingStep("Calculating resilience scores...")
 
@@ -180,7 +192,20 @@ export default function ClimateAdaptiveArchitectureTool() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.message || "Failed to evaluate architecture")
+        console.error('Backend validation error:', errorData)
+        
+        // Extract more specific error details for Zod validation errors
+        if (errorData.error === 'Invalid request data' && errorData.details) {
+          const missingFields = errorData.details
+            .filter((detail: any) => detail.code === 'invalid_type')
+            .map((detail: any) => detail.path.join('.'))
+          
+          if (missingFields.length > 0) {
+            throw new Error(`Missing required fields: ${missingFields.join(', ')}`)
+          }
+        }
+        
+        throw new Error(errorData.message || errorData.error || "Failed to evaluate architecture")
       }
 
       setLoadingStep("Generating AI recommendations...")

@@ -24,7 +24,7 @@ export const config = {
   // Baseline Flood Parameters (New Orleans specific)
   baselineFloodParameters: {
     currentBFE: 8.0, // Base Flood Elevation in feet
-    annualRiseRate: 0.1, // Projected annual rise in feet
+    annualRiseRate: 0.3, // Projected annual rise in feet (3.6 inches/year)
     simulationYears: [2025, 2030, 2035, 2040, 2045, 2050, 2055],
   },
 
