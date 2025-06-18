@@ -147,13 +147,36 @@ CAAT-Climate-Adaptive-Architecture-Tool/
    # or npm install
    ```
 
-3. **Start development server**:
+3. **Environment configuration (optional)**:
+   ```bash
+   cp .env.example .env.local
+   # Edit .env.local if you need custom backend URL
+   ```
+
+4. **Backend URL Configuration**:
+   The frontend automatically uses the production Railway backend with localhost fallback:
+   - **Primary**: `https://caat-climate-adaptive-architecture-tool-production.up.railway.app`
+   - **Fallback**: `http://localhost:8000`
+   
+   To override this behavior, set `NEXT_PUBLIC_BACKEND_URL` in `.env.local`:
+   ```env
+   # For development only (localhost):
+   NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+   
+   # For production only (Railway):
+   NEXT_PUBLIC_BACKEND_URL=https://caat-climate-adaptive-architecture-tool-production.up.railway.app
+   
+   # For custom backend:
+   NEXT_PUBLIC_BACKEND_URL=https://your-custom-backend.com
+   ```
+
+5. **Start development server**:
    ```bash
    pnpm dev
    # or npm run dev
    ```
 
-4. **Build for production**:
+6. **Build for production**:
    ```bash
    pnpm build
    pnpm start
@@ -173,8 +196,21 @@ CAAT-Climate-Adaptive-Architecture-Tool/
 
 3. **Access application**:
    - Frontend: http://localhost:3000
-   - Backend API: http://localhost:3000/api
-   - Health check: http://localhost:3000/api/health
+   - Backend API: http://localhost:8000/api (if running locally)
+   - Health check: http://localhost:8000/api/health (if running locally)
+
+### Backend URL Management
+
+The application features intelligent backend URL management with automatic fallback:
+
+1. **Production-First Approach**: By default, the frontend attempts to connect to the production Railway backend
+2. **Automatic Fallback**: If the production backend is unavailable, it automatically falls back to localhost
+3. **Visual Indicators**: The UI shows which backend is currently being used:
+   - ✅ **Production**: Connected to Railway backend
+   - ⚠️ **Fallback**: Using localhost backend
+   - 🔴 **Disconnected**: No backend available
+
+4. **Manual Override**: Set `NEXT_PUBLIC_BACKEND_URL` to force a specific backend URL
 
 ## 📖 Usage Examples
 
